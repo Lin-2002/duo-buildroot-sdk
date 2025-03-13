@@ -28,7 +28,6 @@
 #include "lane_detection/lane_detection.hpp"
 #include "lane_detection/lstr/lstr.hpp"
 #include "lane_detection/polylanenet/polylanenet.hpp"
-#include "occlusion_classification/occlusion_classification.hpp"
 
 #include "license_plate_detection/license_plate_detection.hpp"
 #include "license_plate_keypoint/license_plate_keypoint.hpp"
@@ -68,10 +67,12 @@
 #include "face_quality/face_quality.hpp"
 #include "fall_detection/fall_det_monitor.hpp"
 #include "fall_detection/fall_detection.hpp"
+#include "human_keypoints_detection/smooth_keypoints/smooth_keypoints.hpp"
 #include "instance_segmentation/yolov8_seg/yolov8_seg.hpp"
 #include "license_plate_recognition/license_plate_recognition.hpp"
 #include "liveness/liveness.hpp"
 #include "mask_face_recognition/mask_face_recognition.hpp"
+#include "occlusion_classification/occlusion_classification.hpp"
 #include "ocr/ocr_detection/ocr_detection.hpp"
 #include "opencv2/opencv.hpp"
 #include "smoke_classification/smoke_classification.hpp"
@@ -189,10 +190,10 @@ unordered_map<int, CreatorFunc> MODEL_CREATORS = {
     {CVI_TDL_SUPPORTED_MODEL_OCR_DETECTION, CREATOR(OCRDetection)},
     {CVI_TDL_SUPPORTED_MODEL_MASKFACERECOGNITION, CREATOR(MaskFaceRecognition)},
     {CVI_TDL_SUPPORTED_MODEL_YOLOV8_SEG, CREATOR(YoloV8Seg)},
+    {CVI_TDL_SUPPORTED_MODEL_OCCLUSION_CLASSIFICATION, CREATOR(OcclusionClassification)},
 #endif
 
     {CVI_TDL_SUPPORTED_MODEL_ISP_IMAGE_CLASSIFICATION, CREATOR(IspImageClassification)},
-    {CVI_TDL_SUPPORTED_MODEL_OCCLUSION_CLASSIFICATION, CREATOR(OcclusionClassification)},
     {CVI_TDL_SUPPORTED_MODEL_IRLIVENESS, CREATOR(IrLiveness)},
     {CVI_TDL_SUPPORTED_MODEL_YOLO, CREATOR(Yolo)},
     {CVI_TDL_SUPPORTED_MODEL_YOLOV3, CREATOR(Yolov3)},
@@ -977,6 +978,57 @@ CVI_S32 CVI_TDL_Set_Fall_FPS(const cvitdl_handle_t handle, float fps) {
   }
   return ctx->fall_monitor_model->set_fps(fps);
 }
+
+CVI_S32 CVI_TDL_Smooth_Keypoints(const cvitdl_handle_t handle, cvtdl_object_t *objects) {
+  cvitdl_context_t *ctx = static_cast<cvitdl_context_t *>(handle);
+  SmoothKeypoints *smooth_keypoints_model = ctx->smooth_keypoints_model;
+  if (smooth_keypoints_model == nullptr) {
+    LOGD("Init Smooth keypoints Model.\n");
+    ctx->smooth_keypoints_model = new SmoothKeypoints();
+    ctx->smooth_keypoints_model->smooth(objects);
+    return CVI_TDL_SUCCESS;
+  }
+  return ctx->smooth_keypoints_model->smooth(objects);
+}
+
+CVI_S32 CVI_TDL_Set_Smooth_Algparam(const cvitdl_handle_t handle, SmoothAlgParam smooth_param) {
+  cvitdl_context_t *ctx = static_cast<cvitdl_context_t *>(handle);
+  SmoothKeypoints *smooth_keypoints_model = ctx->smooth_keypoints_model;
+  if (smooth_keypoints_model == nullptr) {
+    LOGD("Init Smooth keypoints Model.\n");
+    ctx->smooth_keypoints_model = new SmoothKeypoints();
+    ctx->smooth_keypoints_model->set_algparam(smooth_param);
+    return CVI_TDL_SUCCESS;
+  }
+  ctx->smooth_keypoints_model->set_algparam(smooth_param);
+  return CVI_TDL_SUCCESS;
+}
+
+SmoothAlgParam CVI_TDL_Get_Smooth_Algparam(const cvitdl_handle_t handle) {
+  cvitdl_context_t *ctx = static_cast<cvitdl_context_t *>(handle);
+  SmoothKeypoints *smooth_keypoints_model = ctx->smooth_keypoints_model;
+  if (smooth_keypoints_model == nullptr) {
+    LOGD("Init Smooth keypoints Model.\n");
+    ctx->smooth_keypoints_model = new SmoothKeypoints();
+    return ctx->smooth_keypoints_model->get_algparam();
+  }
+  return ctx->smooth_keypoints_model->get_algparam();
+}
+
+CVI_S32 CVI_TDL_Set_Occlusion_Algparam(const cvitdl_handle_t handle,
+                                       const CVI_TDL_SUPPORTED_MODEL_E model_index,
+                                       const OcclusionAlgParam occ_pre_param) {
+  cvitdl_context_t *ctx = static_cast<cvitdl_context_t *>(handle);
+  if (model_index == CVI_TDL_SUPPORTED_MODEL_OCCLUSION_CLASSIFICATION) {
+    OcclusionClassification *occlusion_model =
+        dynamic_cast<OcclusionClassification *>(getInferenceInstance(model_index, ctx));
+    occlusion_model->set_algparam(occ_pre_param);
+    return CVI_SUCCESS;
+  }
+  LOGE("not supported model index\n");
+  return CVI_FAILURE;
+}
+
 #else
 CVI_S32 CVI_TDL_CropImage(VIDEO_FRAME_INFO_S *srcFrame, cvtdl_image_t *p_dst, cvtdl_bbox_t *bbox,
                           bool cvtRGB888) {
@@ -1042,8 +1094,6 @@ DEFINE_INF_FUNC_F1_P1(CVI_TDL_IncarObjectDetection, IncarObjectDetection,
                       CVI_TDL_SUPPORTED_MODEL_INCAROBJECTDETECTION, cvtdl_face_t *)
 DEFINE_INF_FUNC_F1_P1(CVI_TDL_License_Plate_Detectionv2, YoloV8Pose,
                       CVI_TDL_SUPPORTED_MODEL_LP_DETECTION, cvtdl_object_t *)
-DEFINE_INF_FUNC_F1_P1(CVI_TDL_Occlusion_Classification, OcclusionClassification,
-                      CVI_TDL_SUPPORTED_MODEL_OCCLUSION_CLASSIFICATION, cvtdl_class_meta_t *)
 DEFINE_INF_FUNC_F1_P1(CVI_TDL_Image_Classification, ImageClassification,
                       CVI_TDL_SUPPORTED_MODEL_IMAGE_CLASSIFICATION, cvtdl_class_meta_t *)
 DEFINE_INF_FUNC_F1_P1(CVI_TDL_Raw_Image_Classification, RawImageClassification,

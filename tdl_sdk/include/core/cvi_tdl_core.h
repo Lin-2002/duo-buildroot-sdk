@@ -1181,6 +1181,18 @@ DLL_EXPORT CVI_S32 CVI_TDL_Fall(const cvitdl_handle_t handle, cvtdl_object_t *ob
 DLL_EXPORT CVI_S32 CVI_TDL_Fall_Monitor(const cvitdl_handle_t handle, cvtdl_object_t *objects);
 
 /**
+ * @brief occlusion classification
+ *
+ * @param handle An TDL SDK handle.
+ * @param frame Input video frame.
+ * @param object cvtdl_class_meta_t structure, no occlusion score and occlusion score
+ * @return int Return CVI_TDL_SUCCESS on success.
+ */
+
+DLL_EXPORT CVI_S32 CVI_TDL_Set_Occlusion_Algparam(const cvitdl_handle_t handle,
+                                                  const CVI_TDL_SUPPORTED_MODEL_E model_index,
+                                                  const OcclusionAlgParam occ_pre_param);
+/**
  * @brief Set fall detection FPS.
  *
  * @param handle An TDL SDK handle.
@@ -1188,6 +1200,34 @@ DLL_EXPORT CVI_S32 CVI_TDL_Fall_Monitor(const cvitdl_handle_t handle, cvtdl_obje
  * @return int Return CVI_TDL_SUCCESS on success.
  */
 DLL_EXPORT CVI_S32 CVI_TDL_Set_Fall_FPS(const cvitdl_handle_t handle, float fps);
+
+/**
+ * @brief Smooth hunman 17 keypoints
+ *
+ * @param handle An TDL SDK handle.
+ * @param objects Detected object info
+ * @return int Return CVI_TDL_SUCCESS on success.
+ */
+DLL_EXPORT CVI_S32 CVI_TDL_Smooth_Keypoints(const cvitdl_handle_t handle, cvtdl_object_t *objects);
+
+/**
+ * @brief Get smooth algorithm parameters
+ *
+ * @param handle An TDL SDK handle.
+ * @return smooth algorithm param struct.
+ */
+DLL_EXPORT SmoothAlgParam CVI_TDL_Get_Smooth_Algparam(const cvitdl_handle_t handle);
+
+/**
+ * @brief Set smooth algorithm parameters
+ *
+ * @param handle An TDL SDK handle.
+ * @param smooth_param smooth algorithm param struct.
+ * @return int Return CVI_TDL_SUCCESS on success.
+ */
+DLL_EXPORT CVI_S32 CVI_TDL_Set_Smooth_Algparam(const cvitdl_handle_t handle,
+                                               SmoothAlgParam smooth_param);
+
 #endif
 
 /**
@@ -1427,18 +1467,6 @@ DLL_EXPORT CVI_S32 CVI_TDL_OCR_Recognition(const cvitdl_handle_t handle, VIDEO_F
 DLL_EXPORT CVI_S32 CVI_TDL_Image_Classification(const cvitdl_handle_t handle,
                                                 VIDEO_FRAME_INFO_S *frame,
                                                 cvtdl_class_meta_t *obj_meta);
-
-/**
- * @brief occlusion classification
- *
- * @param handle An TDL SDK handle.
- * @param frame Input video frame.
- * @param object cvtdl_class_meta_t structure, no occlusion score and occlusion score
- * @return int Return CVI_TDL_SUCCESS on success.
- */
-DLL_EXPORT CVI_S32 CVI_TDL_Occlusion_Classification(const cvitdl_handle_t handle,
-                                                    VIDEO_FRAME_INFO_S *frame,
-                                                    cvtdl_class_meta_t *obj_meta);
 
 /**
  * @brief Topformer segmentation.
