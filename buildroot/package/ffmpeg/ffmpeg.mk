@@ -555,6 +555,11 @@ ifeq ($(BR2_RISCV_32),y)
 FFMPEG_CONF_OPTS += --disable-rvv --disable-asm
 endif
 
+# Fix build failure on sophgo riscv musl missing assembly instructions
+ifeq ($(BR2_RISCV_64),y)
+FFMPEG_CONF_OPTS += --disable-asm
+endif
+
 # Uses __atomic_fetch_add_4
 ifeq ($(BR2_TOOLCHAIN_HAS_LIBATOMIC),y)
 FFMPEG_CONF_OPTS += --extra-libs=-latomic
