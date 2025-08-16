@@ -901,6 +901,8 @@ function cvi_setup_env()
   export CROSS_COMPILE_PATH
   # buildroot config
 
+  TARGET_TOP_CONFIG="$BUILD_PATH/boards/${CHIP_ARCH,,}/$PROJECT_FULLNAME/${PROJECT_FULLNAME}_defconfig"
+
   if [ -z "${MV_BOARD// }" ]; then
     print_error "No MV_BOARD specified!"
     return 1
@@ -951,6 +953,7 @@ cvi_print_env()
   echo -e "  CROSS_COMPILE_PREFIX: \e[34m$CROSS_COMPILE\e[0m"
   echo -e "  ENABLE_BOOTLOGO: $ENABLE_BOOTLOGO"
   echo -e "  Flash layout xml: $FLASH_PARTITION_XML"
+  echo -e "  Target Top Config: $TARGET_TOP_CONFIG"
   echo -e "  Sensor tuning bin: $SENSOR_TUNING_PARAM"
   echo -e "  Output path: \e[33m$OUTPUT_DIR\e[0m"
   echo -e ""
@@ -1069,6 +1072,7 @@ function build_info()
   export MILKV_BOARD=${MILKV_BOARD}
   export MILKV_BOARD_CONFIG=${MILKV_BOARD_CONFIG}
 
+  print_info "Target Top Config: $TARGET_TOP_CONFIG"
   print_info "Target Board: ${MILKV_BOARD}"
   print_info "Target Board Storage: ${STORAGE_TYPE}"
   print_info "Target Board Config: ${MILKV_BOARD_CONFIG}"
