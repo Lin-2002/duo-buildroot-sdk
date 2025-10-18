@@ -362,6 +362,8 @@ else ifeq ($(CONFIG_TOOLCHAIN_GLIBC_RISCV64),y)
 INITRAMFS_BASE := glibc_riscv64
 else ifeq ($(CONFIG_TOOLCHAIN_MUSL_RISCV64),y)
 INITRAMFS_BASE := musl_riscv64
+else ifeq ($(CONFIG_TOOLCHAIN_MUSL_ARM),y)
+INITRAMFS_BASE := musl_arm
 endif
 
 $(RAMDISK_PATH)/$(RAMDISK_OUTPUT_BASE)/target:
@@ -415,8 +417,11 @@ else
 	$(call gen_cpio,onekernel_fixed_files.txt.sqsh)
 endif
 	# copy multi.its for *.itb layout
+ifeq ($(CONFIG_KERNEL_SECURE_BOOT),y)
+	${Q}cp -f "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/../configs/multi_sign.its" "${BUILD_PATH}/output/multi.its.tmp"
+else
 	${Q}cp -f "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/../configs/multi.its" "${BUILD_PATH}/output/multi.its.tmp"
-
+endif
 	${Q}python3 "${BUILD_PATH}/scripts/boards_scan.py" ${BOOT_IMAGE_ARG}
 	${Q}mv "${BUILD_PATH}/output/multi.its.tmp" "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its"
 ifneq ($(CONFIG_KERNEL_UNCOMPRESSED)$(CONFIG_KERNEL_FASTBOOT), )
@@ -428,7 +433,7 @@ endif
 	${Q}sed -i "s/compression = \"gzip\";/compression = \"${KERNEL_COMPRESS}\";/" ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its
 	${Q}gzip -9 -f -k ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/boot.cpio > ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/boot.cpio.gz
 ifeq ($(CONFIG_SKIP_RAMDISK),y)
-	${Q}sed -ie '26,38d' ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its
+	${Q}sed -i '/ramdisk-1 {/,/\/\*FDT\*\//{/\/\*FDT\*\//!d;}' ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its
 else
 	${Q}sed -i "s/data = \/incbin\/(\".\/rootfs.cpio.gz\");/data = \/incbin\/(\".\/boot.cpio.gz\");/g" ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its
 endif
@@ -443,7 +448,11 @@ ramboot: kernel-dts
 	$(call print_target)
 	$(call gen_cpio,ramboot_fixed_files.txt)
 	# copy multi.its for *.itb layout
+ifeq ($(CONFIG_KERNEL_SECURE_BOOT),y)
+	${Q}cp -f "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/../configs/multi_sign.its" "${BUILD_PATH}/output/multi.its.tmp"
+else
 	${Q}cp -f "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/../configs/multi.its" "${BUILD_PATH}/output/multi.its.tmp"
+endif
 	${Q}python3 "${BUILD_PATH}/scripts/boards_scan.py" --gen_single_board_its --chip_name "${CHIP}" --board_name "${BOARD}"
 	${Q}mv "${BUILD_PATH}/output/multi.its.tmp" "${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/multi.its"
 	${Q}gzip -9 -f -k ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/Image > ${RAMDISK_PATH}/${RAMDISK_OUTPUT_FOLDER}/Image.gz
@@ -469,6 +478,8 @@ else ifeq ($(CONFIG_TOOLCHAIN_GLIBC_ARM),y)
 packages_arch := arm
 else ifeq ($(CONFIG_TOOLCHAIN_UCLIBC_ARM),y)
 packages_arch := uclibc
+else ifeq ($(CONFIG_TOOLCHAIN_MUSL_ARM),y)
+packages_arch := musl
 else ifeq ($(CONFIG_TOOLCHAIN_GLIBC_RISCV64),y)
 packages_arch := glibc_riscv64
 else ifeq ($(CONFIG_TOOLCHAIN_MUSL_RISCV64),y)
