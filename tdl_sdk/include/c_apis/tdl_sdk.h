@@ -63,6 +63,15 @@ TDLImage TDL_ReadImage(const char *path);
 TDLImage TDL_ReadBin(const char *path, TDLDataTypeE data_type);
 
 /**
+ * @brief 读取音频帧为 TDLImageHandle 对象
+ *
+ * @param buffer 音频帧数据指针
+ * @param frame_size 音频帧数据大小
+ * @return  返回读取的 TDLImageHandle 对象, 如果失败返回 NULL
+ */
+TDLImage TDL_ReadAudioFrame(uint8_t *buffer, int frame_size);
+
+/**
  * @brief 销毁一个 TDLImageHandle 对象
  *
  * @param image_handle 需要销毁的 TDLImageHandle 对象
@@ -329,12 +338,38 @@ int32_t TDL_LaneDetection(TDLHandle handle, const TDLModel model_id,
  * @param handle TDLHandle 对象
  * @param model_id 指定字符识别模型类型枚举值
  * @param image_handle TDLImageHandle 对象
- * @param char_meta 输出参数，存储识别结果
+ * @param text_meta 输出参数，存储识别结果
  * @return 成功返回 0，失败返回-1
  */
 int32_t TDL_CharacterRecognition(TDLHandle handle, const TDLModel model_id,
-                                 TDLImage image_handle, TDLOcr *char_meta);
+                                 TDLImage image_handle, TDLText *text_meta);
+/**
+ * @brief 语音识别初始化
+ *
+ * @param handle TDLHandle 对象
+ * @param model_id_encoder 指定encoder模型类型枚举值
+ * @param model_id_decoder 指定decoder模型类型枚举值
+ * @param model_id_joiner 指定joiner模型类型枚举值
+ * @param tokens_path tokens文件路径
+ * @return 成功返回 0，失败返回-1
+ */
+int32_t TDL_SpeechRecognition_Init(TDLHandle handle,
+                                   const TDLModel model_id_encoder,
+                                   const TDLModel model_id_decoder,
+                                   const TDLModel model_id_joiner,
+                                   const char *tokens_path);
 
+/**
+ * @brief 语音识别
+ *
+ * @param handle TDLHandle 对象
+ * @param model_id_encoder 指定encoder模型类型枚举值
+ * @param image_handle TDLImageHandle 对象
+ * @param text_meta 输出参数，存储识别结果
+ * @return 成功返回 0，失败返回-1
+ */
+int32_t TDL_SpeechRecognition(TDLHandle handle, const TDLModel model_id_encoder,
+                              TDLImage image_handle, TDLText *text_meta);
 /**
  * @brief 执行立体视觉深度估计任务
  *
@@ -371,11 +406,15 @@ int32_t TDL_Tracking(TDLHandle handle, int frame_id, TDLFace *face_meta,
  * 2. 传入图像中某个点的位置(x, y)，(此时object_meta size不能为0)
  * 3. 传入object_meta中某个目标的索引，(此时object_meta size不能为0)
  * @param size set_values 元素个数(只能为1或2或4)
+ * @param frame_type 目标框选的方法选择
+ * 0 (TDL_REJECT): 不使用框选方法
+ * 1 (TDL_GRABCUT ): 基于GrabCut框选方法（耗时高）
+ * 2 (TDL_COLOR): 基于颜色阈值框选方法
  * @return 成功返回 0，失败返回-1
  */
 int32_t TDL_SetSingleObjectTracking(TDLHandle handle, TDLImage image_handle,
                                     TDLObject *object_meta, int *set_values,
-                                    int size);
+                                    int size, TDLTargetSearchTypeE frame_type);
 
 /**
  * @brief 执行单目追踪
@@ -400,7 +439,7 @@ int32_t TDL_SingleObjectTracking(TDLHandle handle, TDLImage image_handle,
 int32_t TDL_IntrusionDetection(TDLHandle handle, TDLPoints *regions,
                                TDLBox *box, bool *is_intrusion);
 
-#if defined(__CV181X__) || defined(__CV184X__)
+#if defined(__CV181X__) || defined(__CV184X__) || defined(__CV186X__)
 /**
  * @brief 执行移动侦测任务
  *

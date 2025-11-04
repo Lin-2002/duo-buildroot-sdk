@@ -5,6 +5,7 @@
 #include "app/app_data_types.hpp"
 #include "common/common_types.hpp"
 #include "consumer_counting/consumer_counting_app.hpp"
+#include "speech_recognition/zipformer_encoder.hpp"
 #include "tdl_type_internal.hpp"
 #include "tdl_utils.h"
 #include "tracker/tracker_types.hpp"
@@ -109,6 +110,17 @@ TDLImage TDL_ReadBin(const char *path, TDLDataTypeE data_type) {
   uint8_t *data_buffer = image_context->image->getVirtualAddress()[0];
   fread(data_buffer, 1, file_size, file);
   fclose(file);
+  return (TDLImage)image_context;
+}
+
+TDLImage TDL_ReadAudioFrame(uint8_t *buffer, int frame_size) {
+  TDLImageContext *image_context = new TDLImageContext();
+
+  image_context->image = ImageFactory::createImage(
+      frame_size, 1, ImageFormat::GRAY, TDLDataType::UINT8, true);
+  uint8_t *data_buffer = image_context->image->getVirtualAddress()[0];
+  memcpy(data_buffer, buffer, frame_size);
+
   return (TDLImage)image_context;
 }
 
@@ -245,6 +257,7 @@ int32_t TDL_Detection(TDLHandle handle, const TDLModel model_id,
   std::vector<std::shared_ptr<BaseImage>> images;
   TDLImageContext *image_context = (TDLImageContext *)image_handle;
   images.push_back(image_context->image);
+
   std::vector<std::shared_ptr<ModelOutputInfo>> outputs;
   int32_t ret = model->inference(images, outputs);
   if (ret != 0) {
@@ -638,6 +651,8 @@ int32_t TDL_DetectionKeypoint(TDLHandle handle, const TDLModel model_id,
   if (object_meta->size != 0) {
     for (int32_t i = 0; i < object_meta->size; i++) {
       std::shared_ptr<BaseImage> target_img;
+      int32_t img_width = (int32_t)image_context->image->getWidth();
+      int32_t img_height = (int32_t)image_context->image->getHeight();
       int32_t width = (int32_t)object_meta->info[i].box.x2 -
                       (int32_t)object_meta->info[i].box.x1;
       int32_t height = (int32_t)object_meta->info[i].box.y2 -
@@ -649,6 +664,15 @@ int32_t TDL_DetectionKeypoint(TDLHandle handle, const TDLModel model_id,
           (int32_t)object_meta->info[i].box.x1 - (new_width - width) / 2;
       int32_t crop_y =
           (int32_t)object_meta->info[i].box.y1 - (new_height - height) / 2;
+
+      //边界控制：保证整个裁剪框在图像内部
+      if (crop_x < 0) crop_x = 0;
+      if (crop_y < 0) crop_y = 0;
+      if (crop_x + new_width > img_width)
+        crop_x = std::max(0, img_width - new_width);
+      if (crop_y + new_height > img_height)
+        crop_y = std::max(0, img_height - new_height);
+
       target_img = preprocessor->crop(image_context->image, crop_x, crop_y,
                                       new_width, new_height);
       images.push_back(target_img);
@@ -1006,7 +1030,7 @@ int32_t TDL_LaneDetection(TDLHandle handle, const TDLModel model_id,
 }
 
 int32_t TDL_CharacterRecognition(TDLHandle handle, const TDLModel model_id,
-                                 TDLImage image_handle, TDLOcr *char_meta) {
+                                 TDLImage image_handle, TDLText *text_meta) {
   std::shared_ptr<BaseModel> model = get_model(handle, model_id);
   if (model == nullptr) {
     return -1;
@@ -1022,14 +1046,94 @@ int32_t TDL_CharacterRecognition(TDLHandle handle, const TDLModel model_id,
   std::shared_ptr<ModelOutputInfo> output = outputs[0];
   if (output->getType() == ModelOutputType::OCR_INFO) {
     ModelOcrInfo *char_output = (ModelOcrInfo *)output.get();
-    TDL_InitCharacterMeta(char_meta, char_output->length);
-    char_meta->size = char_output->length;
-    char_meta->text_info = char_output->text_info;
+    TDL_InitCharacterMeta(text_meta, char_output->length);
+    text_meta->size = char_output->length;
+    text_meta->text_info = char_output->text_info;
     char_output->text_info = NULL;
   } else {
     LOGE("Unsupported model output type: %d",
          static_cast<int>(output->getType()));
     return -1;
+  }
+
+  return 0;
+}
+
+int32_t TDL_SpeechRecognition_Init(TDLHandle handle,
+                                   const TDLModel model_id_encoder,
+                                   const TDLModel model_id_decoder,
+                                   const TDLModel model_id_joiner,
+                                   const char *tokens_path) {
+  std::shared_ptr<BaseModel> encoder_model =
+      get_model(handle, model_id_encoder);
+  if (encoder_model == nullptr) {
+    return -1;
+  }
+  std::shared_ptr<BaseModel> decoder_model =
+      get_model(handle, model_id_decoder);
+  if (decoder_model == nullptr) {
+    return -1;
+  }
+  std::shared_ptr<BaseModel> joiner_model = get_model(handle, model_id_joiner);
+  if (joiner_model == nullptr) {
+    return -1;
+  }
+
+  if (model_id_encoder ==
+      TDLModel::TDL_MODEL_RECOGNITION_SPEECH_ZIPFORMER_ENCODER) {
+    std::shared_ptr<ZipformerEncoder> asr_model =
+        std::dynamic_pointer_cast<ZipformerEncoder>(encoder_model);
+
+    asr_model->setTokensPath(std::string(tokens_path));
+    asr_model->setModel(decoder_model, joiner_model);
+
+  } else {  // other asr model
+    LOGE("Unsupported encoder model type: %d", model_id_encoder);
+    return -1;
+  }
+
+  return 0;
+}
+
+int32_t TDL_SpeechRecognition(TDLHandle handle, const TDLModel model_id_encoder,
+                              TDLImage image_handle, TDLText *text_meta) {
+  std::shared_ptr<BaseModel> encoder_model =
+      get_model(handle, model_id_encoder);
+  if (encoder_model == nullptr) {
+    return -1;
+  }
+
+  TDLContext *context = (TDLContext *)handle;
+  if (context->asr_meta == nullptr) {
+    context->asr_meta = std::make_shared<ModelASRInfo>();
+  }
+
+  if (!text_meta->text_info) {
+    free(text_meta->text_info);
+    text_meta->text_info = NULL;
+  }
+
+  std::shared_ptr<ModelOutputInfo> output_data =
+      std::static_pointer_cast<ModelOutputInfo>(context->asr_meta);
+
+  TDLImageContext *image_context = (TDLImageContext *)image_handle;
+
+  if (model_id_encoder ==
+      TDLModel::TDL_MODEL_RECOGNITION_SPEECH_ZIPFORMER_ENCODER) {
+    std::shared_ptr<ZipformerEncoder> asr_model =
+        std::dynamic_pointer_cast<ZipformerEncoder>(encoder_model);
+
+    asr_model->inference(image_context->image, output_data);
+
+  } else {  // other asr model
+    LOGE("Unsupported encoder model type: %d", model_id_encoder);
+    return -1;
+  }
+
+  if (context->asr_meta->text_info) {
+    text_meta->text_info =
+        (char *)malloc(strlen(context->asr_meta->text_info) + 1);
+    strcpy(text_meta->text_info, context->asr_meta->text_info);
   }
 
   return 0;
@@ -1095,7 +1199,7 @@ int32_t TDL_Tracking(TDLHandle handle, int frame_id, TDLFace *face_meta,
 
 int32_t TDL_SetSingleObjectTracking(TDLHandle handle, TDLImage image_handle,
                                     TDLObject *object_meta, int *set_values,
-                                    int size) {
+                                    int size, TDLTargetSearchTypeE frame_type) {
   TDLContext *context = (TDLContext *)handle;
   if (context == nullptr) {
     return -1;
@@ -1132,8 +1236,8 @@ int32_t TDL_SetSingleObjectTracking(TDLHandle handle, TDLImage image_handle,
   }
 
   if (size == 2) {
-    return context->tracker->initialize(image_context->image, bboxes,
-                                        set_values[0], set_values[1]);
+    return context->tracker->initialize(
+        image_context->image, bboxes, set_values[0], set_values[1], frame_type);
 
   } else if (size == 4) {
     ObjectBoxInfo init_bbox;
@@ -1143,8 +1247,8 @@ int32_t TDL_SetSingleObjectTracking(TDLHandle handle, TDLImage image_handle,
     init_bbox.y2 = set_values[3];
     init_bbox.score = 1.0f;
 
-    return context->tracker->initialize(image_context->image, bboxes,
-                                        init_bbox);
+    return context->tracker->initialize(image_context->image, bboxes, init_bbox,
+                                        frame_type);
   } else {
     LOGE("set_values size should be 1 or 2 or 4, but got %d", size);
     return -1;
@@ -1224,7 +1328,7 @@ int32_t TDL_IntrusionDetection(TDLHandle handle, TDLPoints *regions,
   return 0;
 }
 
-#if defined(__CV181X__) || defined(__CV184X__)
+#if defined(__CV181X__) || defined(__CV184X__) || defined(__CV186X__)
 
 int32_t TDL_MotionDetection(TDLHandle handle, TDLImage background,
                             TDLImage detect_image, TDLObject *roi,

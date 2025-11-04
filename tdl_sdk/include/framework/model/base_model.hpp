@@ -57,9 +57,12 @@ class BaseModel {
       std::vector<std::shared_ptr<ModelOutputInfo>>& out_datas,
       const std::map<std::string, float>& parameters = {});
 
+  virtual int32_t outputParse(const std::shared_ptr<BaseImage>& image,
+                              std::shared_ptr<ModelOutputInfo>& out_data);
+
   virtual int32_t outputParse(
       const std::vector<std::shared_ptr<BaseImage>>& images,
-      std::vector<std::shared_ptr<ModelOutputInfo>>& out_datas) = 0;
+      std::vector<std::shared_ptr<ModelOutputInfo>>& out_datas);
 
   virtual int32_t outputParse(
       const std::vector<std::vector<std::shared_ptr<BaseImage>>>& images,
@@ -82,6 +85,10 @@ class BaseModel {
   int32_t setPreprocessParameters(const PreprocessParams& pre_param,
                                   const std::string& input_name = "");
   virtual int32_t setupNetwork(NetParam& net_param);
+
+  const std::vector<std::string>& getInputNames() const;
+  const std::vector<std::string>& getOutputNames() const;
+  int32_t getTensorInfo(const std::string& name, TensorInfo& info);
 
  private:
   int getFitBatchSize(int left_size) const;

@@ -392,6 +392,19 @@ int32_t BaseModel::outputParse(
   return -1;
 }
 
+int32_t BaseModel::outputParse(const std::shared_ptr<BaseImage>& image,
+                               std::shared_ptr<ModelOutputInfo>& out_data) {
+  LOGW("outputParse not implemented");
+  return -1;
+}
+
+int32_t BaseModel::outputParse(
+    const std::vector<std::shared_ptr<BaseImage>>& images,
+    std::vector<std::shared_ptr<ModelOutputInfo>>& out_datas) {
+  LOGW("outputParse not implemented");
+  return -1;
+}
+
 void BaseModel::setTypeMapping(
     const std::map<int, TDLObjectType>& type_mapping) {
   type_mapping_ = type_mapping;
@@ -404,4 +417,21 @@ void BaseModel::setExportFeature(int flag) {
   LOGE("only can  be used for evaluating the LSTR model");
   throw std::runtime_error(
       "setExportFeature() should not be called on BaseModel");
+}
+
+const std::vector<std::string>& BaseModel::getOutputNames() const {
+  return net_->getOutputNames();
+}
+
+const std::vector<std::string>& BaseModel::getInputNames() const {
+  return net_->getInputNames();
+}
+
+int32_t BaseModel::getTensorInfo(const std::string& name, TensorInfo& info) {
+  info = net_->getTensorInfo(name);
+  if (info.shape.size() == 0) {
+    LOGE("Tensor info not found for %s", name.c_str());
+    return -1;
+  }
+  return 0;
 }

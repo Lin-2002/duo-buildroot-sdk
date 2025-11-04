@@ -27,6 +27,7 @@ set(CORES_SRCS
                $<TARGET_OBJECTS:app>
                $<TARGET_OBJECTS:intrusion_detect>
                $<TARGET_OBJECTS:occlusion_detect>
+               $<TARGET_OBJECTS:target_search>
                $<TARGET_OBJECTS:encoder>
                )
 if(NOT "${CVI_PLATFORM}" STREQUAL "CMODEL_CV181X" AND NOT "${CVI_PLATFORM}" STREQUAL "CMODEL_CV184X")
@@ -48,7 +49,7 @@ if("${CVI_PLATFORM}" STREQUAL "CMODEL_CV184X" OR "${CVI_PLATFORM}" STREQUAL "CV1
    set(CORES_SRCS ${CORES_SRCS} $<TARGET_OBJECTS:ive>)
 endif()
 
-if("${CVI_PLATFORM}" STREQUAL "CV181X" OR "${CVI_PLATFORM}" STREQUAL "CV184X" OR "${CVI_PLATFORM}" STREQUAL "CMODEL_CV184X")
+if("${CVI_PLATFORM}" STREQUAL "CV181X" OR "${CVI_PLATFORM}" STREQUAL "CV184X"  OR "${CVI_PLATFORM}" STREQUAL "SOPHON" OR "${CVI_PLATFORM}" STREQUAL "CMODEL_CV184X")
    set(CORES_SRCS ${CORES_SRCS} $<TARGET_OBJECTS:motion_detect>)
 endif()
 
@@ -60,6 +61,7 @@ target_link_libraries(tdl_core
    ${OPENCV_LIBS_IMCODEC}
    ${IVE_LIBS}
    ${ZLIB_LIBRARY}
+   kaldi-native-fbank-core
 )
 
 # if("${CVI_PLATFORM}" STREQUAL "SOPHON" OR "${CVI_PLATFORM}" STREQUAL "BM1688")
@@ -76,7 +78,7 @@ target_link_libraries(tdl_ex ${LIBWEBSOCKETS_LIBS}
 
 # static library
 add_library(tdl_core-static STATIC ${CORES_SRCS})
-target_link_libraries(tdl_core-static ${MLIR_LIBS_STATIC} ${OPENCV_LIBS_IMCODEC_STATIC} )
+target_link_libraries(tdl_core-static ${MLIR_LIBS_STATIC} ${OPENCV_LIBS_IMCODEC_STATIC} kaldi-native-fbank-core)
 
 add_library(tdl_ex-static STATIC ${EX_SRCS})
 target_link_libraries(tdl_ex-static ${LIBWEBSOCKETS_LIBS_STATIC} ${CURL_LIBRARY_STATIC} ${OPENSSL_LIBRARY_STATIC} ${ZLIB_LIBRARY_STATIC} )
