@@ -407,9 +407,26 @@ function build_tdl_sdk()
     cp -a "${TPU_SDK_INSTALL_PATH}"/bin/* "${SYSTEM_OUT_DIR}"/usr/bin/tpu/
   fi
 
-  if [[ -d "${TDL_SDK_PATH}/install/bin" ]]; then
-    mkdir -p "${SYSTEM_OUT_DIR}"/usr/bin/ai
-    cp -a "${TDL_SDK_PATH}"/install/bin/sample_* "${SYSTEM_OUT_DIR}"/usr/bin/ai/
+  lib_dir="${SYSTEM_OUT_DIR}/lib"
+  app_dir="${SYSTEM_OUT_DIR}/usr/bin/ai"
+
+  tdl_lib="${TDL_SDK_PATH}/install/${CHIP_ARCH}/lib"
+  tdl_utils="${TDL_SDK_PATH}/install/${CHIP_ARCH}/sample/utils/lib"
+  tdl_app="${TDL_SDK_PATH}/install/${CHIP_ARCH}/bin/c"
+
+  if [[ -d "${tdl_lib}" ]]; then
+    [[ ! -d "${lib_dir}" ]] && mkdir -p "${lib_dir}"
+    cp -af ${tdl_lib}/lib*.so "${lib_dir}"/
+  fi
+
+  if [[ -d "${tdl_utils}" ]]; then
+    [[ ! -d "${lib_dir}" ]] && mkdir -p "${lib_dir}"
+    cp -af "${tdl_utils}"/lib*.so "${lib_dir}"/
+  fi
+
+  if [[ -d "${tdl_app}" ]]; then
+    [[ ! -d "${app_dir}" ]] && mkdir -p "${app_dir}"
+    cp -af "${tdl_app}"/sample_* "${app_dir}"/
   fi
 }
 
