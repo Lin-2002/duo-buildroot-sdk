@@ -258,16 +258,16 @@ start() {
     if [ -f $ADBD_PATH/adbd ]; then
 	$ADBD_PATH/adbd &
     fi
-  else
-    # Start the gadget driver
-    UDC=`ls /sys/class/udc/ | awk '{print $1}'`
-    echo ${UDC} >$CVI_GADGET/UDC
+    sleep 0.5
   fi
+  # Start the gadget driver
+  UDC=`ls /sys/class/udc/ | awk '{print $1}'`
+  echo ${UDC} >$CVI_GADGET/UDC
 }
 
 stop() {
   if [ -d $CVI_GADGET/configs/c.1/ffs.adb ]; then
-    pkill adbd
+    killall adbd
     rm $CVI_GADGET/configs/c.1/ffs.adb
   else
     echo "" >$CVI_GADGET/UDC
